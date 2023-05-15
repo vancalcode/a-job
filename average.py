@@ -21,25 +21,20 @@ def close_price(df, num):
     # print("yesterday_close: ", yesterday_close)
     return yesterday_close
 
-def average_price(df, num):
-    # 计算num日均线
-    ma = df['close'].rolling(window=num).mean()
-    # 获取第num天的num日均线数据
-    average_price = ma.iloc[num-1]
-    # 输出结果
-    # print("average_price: ", average_price)
-    return average_price
-
 hit_ts_code = []
+'''
+df: mysql 查询的数据
+num: 计算 num 天内，价格持续大于 5日线，10 日线，20 日线的票
+'''
 def higher_average_price(df, num):
-    # start_day = 1
-    # for item in range(num):
-    #     print("close_price: ", close_price(df, start_day), "average_price: ",average_price(df, start_day))
-    #     if close_price(df, start_day) > average_price(df, start_day):
-    #          start_day += 1
-    # if start_day - 1 == num: 
-    #     print(df['ts_code'][0])
-
+    last_5_days['5_day_ma'] = df['close'].rolling(window=5).mean()
+    last_5_days['10_day_ma'] = df['close'].rolling(window=10).mean()
+    last_5_days['20_day_ma'] = df['close'].rolling(window=20).mean()
+    for i in range(num):
+        print(df['close'].iloc(i))
+        print(last_5_days['5_day_ma'].iloc(i))
+        # df['close'].iloc(i) > last_5_days['5_day_ma'].iloc(i)
+    
 
 if __name__ == '__main__':
     df = read_data()
