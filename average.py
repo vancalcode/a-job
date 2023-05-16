@@ -38,7 +38,7 @@ def higher_average_price(df, num):
     print("hit_ts_code: ",hit_ts_code)
 
 def send_email():
-    
+    jj
 
 if __name__ == '__main__':
     df = read_data()
