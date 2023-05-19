@@ -1,3 +1,4 @@
+
 '''
 Created on 2020年1月30日
 @author: HYG
@@ -7,11 +8,14 @@ import pandas as pd
 import pymysql
 import concurrent.futures
 
-conn = pymysql.connect(host='127.0.0.1', port = 3306, user='root', password='huang2009', database='stocks')
-cursor = conn.cursor()
+from sqlalchemy import create_engine
+
+engine_ts = create_engine('mysql+pymysql://root:huang2009@127.0.0.1:3306/stocks?charset=utf8&use_unicode=1')
+
+conn = pymysql.connect(host='127.0.0.1', port=3306, user='root', password='huang2009', database='stocks')
+
 '''
 num: 计算出最近num天内收盘持续大于 5日线,10日线,20日线的票
-
 def higher_average_price(num):
     hit_ts_code = []
     sql = """SELECT ts_code FROM stock_basic WHERE symbol > 000000 and symbol < 680000"""
@@ -40,11 +44,12 @@ def higher_average_price(num):
     print("hit_ts_code: ", hit_ts_code)
 '''
 
+
 def improve_update_average():
     sql = """SELECT ts_code FROM stock_basic WHERE (symbol > 000000 and symbol < 300000) or (symbol > 600000 and symbol < 680000)"""
     base_df = pd.read_sql_query(sql, engine_ts)
 
-    def update_row(row):
+    def update_row(row, queue):
         sql = "SELECT * FROM stock_deal_history_2023 WHERE ts_code = '{}' ORDER BY trade_date DESC".format(
             row['ts_code'])
         df = pd.read_sql_query(sql, engine_ts)
@@ -53,43 +58,41 @@ def improve_update_average():
                         '10_day_ma': df['close'].rolling(window=10).mean().dropna(),
                         '20_day_ma': df['close'].rolling(window=20).mean().dropna()}
 
-        # 遍历数据，获取5日、10日、20日均线值并插入表中
-
         update_data = []
-        total_sql = ""
         for index, row in df.iterrows():
-            update = {}
-            # update_sql = ""
-            if index < len(average_data['5_day_ma']):
-                update['5_avg'] = round(average_data['5_day_ma'].iloc[index], 2)
-                # update_sql = "Set 5_avg = {}".format(average_data['5_day_ma'].iloc[index])
-            if index < len(average_data['10_day_ma']):
-                update['10_day_ma'] = round(average_data['10_day_ma'].iloc[index], 2)
-                # update_sql = update_sql + ", 10_avg = {}".format(average_data['10_day_ma'].iloc[index])
-            if index < len(average_data['20_day_ma']):
-                update['20_day_ma'] = round(average_data['20_day_ma'].iloc[index], 2)
-                # update_sql = update_sql + ", 20_avg = {}".format(average_data['20_day_ma'].iloc[index])
-            # if update != "":
-            if update:
-                update['id'] = row['id']
-                # update_sql = "UPDATE stock_deal_history_2023 {} WHERE id = {};".format(update_sql, row['id'])
-                # total_sql += update_sql + "\r\n"
-                update_data.append(update)
-        print(update_data)
-
+            avg_5 = None
+            avg_10 = None
+            avg_20 = None
+            if index < len(average_data['5_day_ma']) and index < len(average_data['10_day_ma']) and index < len(average_data['20_day_ma']):
+                avg_5 = round(average_data['5_day_ma'].iloc[index], 2)
+                avg_10 = round(average_data['10_day_ma'].iloc[index], 2)
+                avg_20 = round(average_data['20_day_ma'].iloc[index], 2)
+                update_data.append((avg_5, avg_10, avg_20, row['id']))
+        if len(update_data) >= 1:
+            queue.put(update_data)
 
     with concurrent.futures.ThreadPoolExecutor() as executor:
+        queue = queue.Queue()
         futures = []
         for _, row in base_df.iterrows():
-            futures.append(executor.submit(update_row, row))
+            futures.append(executor.submit(update_row, row, queue))
         for future in concurrent.futures.as_completed(futures):
             try:
                 future.result()
             except Exception as e:
                 print(e)
 
+    cursor = conn.cursor()
+    while not queue.empty():
+        update_data = queue.get()
+        sql = "update stock_deal_history_2023 set avg_5 = %s, avg_10 = %s, avg_20 = %s where id = %s"
+        cursor.executemany(sql, update_data)
+    # 提交更改
+    conn.commit()
+    # 关闭游标和数据库连接
+    cursor.close()
+
 
 
 if __name__ == '__main__':
     improve_update_average()
-
