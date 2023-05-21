@@ -22,7 +22,7 @@ def send(message="", subject="N日均线上方"):
             smtp.login(user=user, password=password)
             # 实际发送、接收邮件配置
             smtp.sendmail(from_addr=user, to_addrs=to_addrs.split(','), msg=msg.as_string())
-            print("{}邮件发送成功".format(subject))
+            print("【{}】邮件发送成功".format(subject))
     except Exception as e:
         print("邮件发送失败：", e)
 

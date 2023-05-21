@@ -38,18 +38,22 @@ def higher_average_price(num):
         # 遍历每个分组
         for name, group in grouped:
             hit = 0
+            deal_amount = 0
+            first_item = next(group.itertuples())
             for item in group.itertuples():
+                deal_amount += item.vol
                 # print("code:{}, close:{},avg_5:{}, avg_10:{}, avg_20:{}".format(item.ts_code, item.close, item.avg_5, item.avg_10, item.avg_20))
+                # 均线上方
                 if item.close >= item.avg_5 and item.close >= item.avg_10 and item.close >= item.avg_20 and item.avg_5 >= item.avg_10 >= item.avg_20:
                     hit += 1
                 else:
                     break
-                if hit == num:
-                    hit_ts_code.append(name)
-
-
+            # 成交量放大，并且连续价格位于均线上分
+            if hit == num and first_item.vol > (deal_amount/num):
+                hit_ts_code.append(name)
     else:
         print('result is empty')
+        
     print("hit_ts_code: ", hit_ts_code)
     if len(hit_ts_code) != 0:
         message = '\n'.join(map(str, hit_ts_code)).replace(',', '').replace("'", "").replace("(", "").replace(")", "")
