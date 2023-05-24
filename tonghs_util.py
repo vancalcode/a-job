@@ -12,26 +12,31 @@ headers = {
     'hexin-v': 'A5IqLazGIkG8f1492vQoXl_N5VNxo5-8yLOKaFxruuUw4TzNRDPmTZg32vEv'
 }
 
+
 def remove_stock():
-    response = requests.get('http://t.10jqka.com.cn/newcircle/group/getSelfStockWithMarket/?callback=selfStock&_=1684817111458', headers=headers, verify=False)
+    response = requests.get(
+        'http://t.10jqka.com.cn/newcircle/group/getSelfStockWithMarket/?callback=selfStock&_=1684817111458',
+        headers=headers, verify=False)
     # 将返回的字符串转化为json格式
     json_data = json.loads(response.text.replace('selfStock(', '').replace(');', ''))
     # 获取code字段
     for item in json_data['result']:
         # 移除自选
-        url = 'http://t.10jqka.com.cn/newcircle/group/modifySelfStock/?op=del&stockcode={}_{}'.format(item['code'],item['marketid'])
-        print(url)
-        response = requests.post(url, headers=headers, verify=False)
-        print(response.json())
+        url = 'http://t.10jqka.com.cn/newcircle/group/modifySelfStock/?op=del&stockcode={}_{}'.format(item['code'],
+                                                                                                      item['marketid'])
+        requests.post(url, headers=headers, verify=False)
+    print("移除成功")
+
 
 def add_stock(code_list):
+    remove_stock()
     for code in code_list:
         # 添加自选
         url = 'http://t.10jqka.com.cn/newcircle/group/modifySelfStock/?callback=modifyStock&op=add&stockcode={}&_=1684817111421'.format(
             code)
-        print(url)
-        response = requests.post(url, headers=headers, verify=False)
-        print(response.status_code)
+        requests.post(url, headers=headers, verify=False)
+    print("添加成功")
+
 
 if __name__ == '__main__':
     remove_stock()
